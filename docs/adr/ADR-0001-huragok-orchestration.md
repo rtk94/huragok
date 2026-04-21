@@ -3,7 +3,11 @@
 **Status:** Accepted
 **Date:** 2026-04-21
 **Author:** Rich
-**Related:** ADR-0002 (agent definitions, pending), ADR-0003 (frontend testing & UI gate, pending), ADR-0004 (parallelism, future), ADR-0005 (retrospectives & iteration, future), ADR-0006 (bootstrap & distribution, future)
+**Related:** ADR-0002 (orchestrator daemon internals, pending), ADR-0003 (agent definitions, pending), ADR-0004 (frontend testing & UI gate, future), ADR-0005 (parallelism, future), ADR-0006 (retrospectives & iteration, future), ADR-0007 (bootstrap & distribution, future)
+
+**Revision history:**
+- 2026-04-21 — Initial Accepted version.
+- 2026-04-21 — Renumbered downstream ADRs: inserted ADR-0002 (orchestrator daemon internals) per in-repo review; former 0002–0006 shifted to 0003–0007.
 
 ## Context
 
@@ -56,7 +60,7 @@ Agents read and write these files. They do not pass structured data through the 
 
 **Rationale:** In-memory handoffs between agents look clean in diagrams but fail silently at scale. File-based handoffs are auditable, resumable, and survive process death.
 
-### D3. Agent roster (summary; full definitions in ADR-0002)
+### D3. Agent roster (summary; full definitions in ADR-0003)
 
 Six roles, each a file under `.claude/agents/` with a crisp system prompt, tool allowlist, and model assignment:
 
@@ -67,7 +71,7 @@ Six roles, each a file under `.claude/agents/` with a crisp system prompt, tool 
 - **Critic** — consumes all of the above, executes tests, inspects mutation results, drives Playwright for UI flows, writes `review.md` with pass / fail / block. Authority to mark a task `software-complete` or `blocked`. Sonnet with read-heavy toolset; no code-write access outside review artifacts.
 - **Documenter** — post-merge only. Updates user-facing docs when features reach `done`. Haiku or Sonnet. Scoped to docs paths.
 
-The collapses relative to the original eight-role vision — PM into Orchestrator, Tester + Reviewer into Critic, UX Designer into Architect mode flag — are motivated by coordination-cost concerns documented in ADR-0002.
+The collapses relative to the original eight-role vision — PM into Orchestrator, Tester + Reviewer into Critic, UX Designer into Architect mode flag — are motivated by coordination-cost concerns documented in ADR-0003.
 
 ### D4. Budget enforcement is the orchestrator's job
 
@@ -104,7 +108,7 @@ The Architect makes the foundational call because it is an architectural judgmen
 
 **Rationale:** The original "gate on every UI task" design blocked batches on operator availability even when the operator would end up reviewing the whole batch anyway. The original "no gate at all" design let foundational breakage compound across eight downstream tasks before anyone looked. This policy targets the specific failure mode — propagated error through task dependencies — without paying the availability tax on routine work.
 
-Full mechanics — screenshot conventions, the visual-critic subagent, the notification reply format, how `iterate` becomes a fixup batch — are ADR-0003.
+Full mechanics — screenshot conventions, the visual-critic subagent, the notification reply format, how `iterate` becomes a fixup batch — are ADR-0004.
 
 ### D7. Iteration is bounded
 
@@ -135,7 +139,7 @@ Starting tier: 1. Upgrade to 2 before exposing the orchestrator to any untrusted
 
 `.huragok/` is committed to the target repo, with a top-level `.huragok/README.md` explaining what it is to human collaborators who encounter it in the tree. This is required by D2 (state lives in the repo) and D8 (git is the coordination substrate across machines), and makes end-to-end auditability possible — every decision, every artifact, every review is in history.
 
-Distributability is an explicit goal: Huragok should be installable by someone who clones it from GitHub and wants to point it at their own repos. A `huragok init` scaffold generator — creates `.huragok/`, installs `.claude/agents/*.md`, appends a Huragok section to `CLAUDE.md` — is the onboarding path. Details are ADR-0006.
+Distributability is an explicit goal: Huragok should be installable by someone who clones it from GitHub and wants to point it at their own repos. A `huragok init` scaffold generator — creates `.huragok/`, installs `.claude/agents/*.md`, appends a Huragok section to `CLAUDE.md` — is the onboarding path. Details are ADR-0007.
 
 ## Consequences
 
@@ -154,19 +158,19 @@ Distributability is an explicit goal: Huragok should be installable by someone w
 - Two systems to maintain (Python orchestrator, Claude Code agent definitions).
 - File-based state discipline requires Orchestrator agent prompts that consistently read/write correctly; drift here will be the most likely failure mode in practice.
 - The foundational-task UI gate means some batches will still halt awaiting operator review. This is intentional and scoped.
-- Worktree-based parallelism (ADR-0004) will require careful handling of shared dependencies and integration testing.
+- Worktree-based parallelism (ADR-0005) will require careful handling of shared dependencies and integration testing.
 - Tier-1 secret management is adequate but loose; the upgrade to tier 2 needs to happen before any exposure increase.
 
 ## Target project sequencing
 
 1. **Phase 1 — MVP build.** No dogfooding possible; Huragok doesn't exist yet. Build by hand: the Python orchestrator, the six agent definitions, a minimal batch for a toy target. No parallelism. Sequential-only, single-machine, Tier-1 secrets.
-2. **Phase 2 — First real run: Huragok-on-Huragok.** Use the MVP to produce ADRs 0004, 0005, 0006 (all text deliverables). Bounded blast radius. Validates the retrospective/iteration engine against a tractable domain before subjecting a real codebase to it.
-3. **Phase 3 — First code project: Guituner.** Smaller scope than Argus and exposes Android as a target — surfaces whether ADR-0003 needs Android-specific branches (Playwright is desktop-web-focused) *early*, while the Huragok codebase is still malleable.
+2. **Phase 2 — First real run: Huragok-on-Huragok.** Use the MVP to produce ADRs 0005, 0006, 0007 (all text deliverables). Bounded blast radius. Validates the retrospective/iteration engine against a tractable domain before subjecting a real codebase to it.
+3. **Phase 3 — First code project: Guituner.** Smaller scope than Argus and exposes Android as a target — surfaces whether ADR-0004 needs Android-specific branches (Playwright is desktop-web-focused) *early*, while the Huragok codebase is still malleable.
 4. **Phase 4+ — Argus, then anything else.** Talos stays out until past planning.
 
 ## Open questions
 
-*None remaining for ADR-0001.* Deployment, secrets, repo coupling, and first-target sequencing are resolved above. Further questions will surface in ADRs 0002–0006.
+*None remaining for ADR-0001.* Deployment, secrets, repo coupling, and first-target sequencing are resolved above. Further questions will surface in ADRs 0002–0007.
 
 ## Alternatives considered
 
@@ -176,7 +180,7 @@ Distributability is an explicit goal: Huragok should be installable by someone w
 
 **Single generalist agent, no specialization.** Rejected. Specialist subagents with narrow tool allowlists catch handoff-shaped defects (test theater, scope creep, architecture drift) that a single generalist will not flag against itself. The cost of specialization is handoff overhead; the six-role roster is the budget we are willing to pay.
 
-**More than six specialist roles.** Rejected. Coordination cost grows faster than specialization benefit past roughly six roles at this system size. Collapses documented above; details in ADR-0002.
+**More than six specialist roles.** Rejected. Coordination cost grows faster than specialization benefit past roughly six roles at this system size. Collapses documented above; details in ADR-0003.
 
 **Centralized LAN-service orchestrator daemon.** Rejected for Phase 1–3. Introduces a distributed-system maintenance burden to solve a coordination problem git already handles. Left as a clean future upgrade path conditional on concrete concurrent-workload need.
 
