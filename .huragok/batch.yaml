@@ -1,0 +1,38 @@
+# Huragok — Current Batch
+#
+# A batch is a list of tasks Huragok will execute against this repo. The
+# schema is defined in ADR-0001 and will be formalized in ADR-0002.
+#
+# This file is currently empty. Populate it before starting a batch, or let
+# `huragok init-batch` scaffold one interactively.
+#
+# ---
+# Example (reference only; do not uncomment until actually queueing a batch):
+#
+# batch_id: batch-001
+# created: 2026-04-21T09:00:00Z
+# budgets:
+#   wall_clock_hours: 12
+#   max_tokens: 5_000_000
+#   max_dollars: 50.00
+#   max_iterations: 2
+# tasks:
+#   - id: task-0001
+#     title: "Add user preferences endpoint"
+#     kind: backend   # backend | frontend | fullstack | docs
+#     priority: 1
+#     acceptance_criteria:
+#       - "GET /api/preferences returns 200 with current user's prefs"
+#       - "PATCH /api/preferences updates prefs and persists to DB"
+#       - "Unauthenticated requests return 401"
+#     depends_on: []
+#   - id: task-0002
+#     title: "Preferences settings page"
+#     kind: frontend
+#     priority: 2
+#     acceptance_criteria:
+#       - "Settings route loads current prefs"
+#       - "Form submits and shows success state"
+#     depends_on: [task-0001]
+
+tasks: []

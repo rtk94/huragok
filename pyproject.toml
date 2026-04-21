@@ -1,0 +1,85 @@
+[project]
+name = "huragok"
+version = "0.1.0"
+description = "Autonomous multi-agent development orchestration for Claude Code."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Richard Knepp" },
+]
+keywords = ["claude-code", "ai-agents", "orchestration", "automation"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Build Tools",
+]
+
+# Runtime dependencies will be added as the orchestrator takes shape in Phase 1.
+# Expected near-term additions: pydantic, pyyaml, httpx, structlog, typer.
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[project.urls]
+Homepage = "https://github.com/rknepp/huragok"
+Repository = "https://github.com/rknepp/huragok"
+Issues = "https://github.com/rknepp/huragok/issues"
+
+# The CLI entrypoint will be wired up when the orchestrator module exists.
+# [project.scripts]
+# huragok = "orchestrator.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["orchestrator"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "mypy>=1.11",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",  # line-too-long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets
+*.env
+.env*
+!.env.example
+/etc/huragok/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Huragok runtime artifacts that shouldn't version
+.huragok/state.lock
+.huragok/*.log
