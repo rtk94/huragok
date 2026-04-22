@@ -1,15 +1,18 @@
 """Huragok CLI.
 
-Slice A implements the read-only inspection commands (``status``,
-``tasks``, ``show``). Every other command from ADR-0002 D5 is registered
-as a stub that exits 1 with a ``not implemented until Slice B`` message,
-so the help text is complete and Slice B lands as a fill-in rather than a
-reshape.
+Slice A implemented the read-only inspection commands (``status``,
+``tasks``, ``show``); B1 promotes ``run``, ``stop``, and ``halt`` to
+real implementations that drive the asyncio supervisor defined in
+:mod:`orchestrator.supervisor`. ``submit``, ``reply``, and ``logs``
+remain B2 stubs.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
+import signal
 from pathlib import Path
 from typing import Annotated
 
@@ -32,7 +35,9 @@ from orchestrator.constants import (
 from orchestrator.logging_setup import configure_logging
 from orchestrator.paths import (
     HuragokNotFoundError,
+    daemon_pid_file,
     find_huragok_root,
+    requests_dir,
     task_dir,
 )
 from orchestrator.state import (
@@ -368,14 +373,23 @@ def _artifact_title(spec_path: Path) -> str | None:
 
 
 # ---------------------------------------------------------------------------
-# Slice-B stubs.
+# Supervisor lifecycle: run / stop / halt.
 # ---------------------------------------------------------------------------
 
 
 @app.command()
 def run() -> None:
-    """Start the orchestrator daemon in the foreground (Slice B)."""
-    _stub("run")
+    """Start the orchestrator daemon in the foreground."""
+    # Imported lazily so that `huragok --help` and read-only commands do not
+    # pay the import cost of the asyncio supervisor stack.
+    from orchestrator.supervisor.loop import run as supervisor_run
+
+    root = _resolve_root()
+    _init_logging()
+    settings = load_settings()
+
+    exit_code = asyncio.run(supervisor_run(root, settings))
+    raise typer.Exit(exit_code)
 
 
 @app.command()
@@ -386,14 +400,70 @@ def start() -> None:
 
 @app.command()
 def stop() -> None:
-    """Gracefully stop a running orchestrator daemon (Slice B)."""
-    _stub("stop")
+    """Gracefully stop a running orchestrator daemon.
+
+    Sends SIGTERM to the PID recorded in ``.huragok/daemon.pid``. If no
+    daemon is running, exits 0 with a friendly message — a missing
+    daemon is not an error condition.
+    """
+    root = _resolve_root()
+    _init_logging()
+
+    pid = _read_daemon_pid(root)
+    if pid is None:
+        typer.echo("no daemon running")
+        return
+    if not _process_alive(pid):
+        typer.echo(f"stale pid file (pid {pid} not running); removing")
+        daemon_pid_file(root).unlink(missing_ok=True)
+        return
+
+    # Belt-and-suspenders: write a ``stop`` request marker so the loop's
+    # request-file poll picks it up even if signal delivery is slow.
+    req_dir = requests_dir(root)
+    req_dir.mkdir(parents=True, exist_ok=True)
+    (req_dir / "stop").write_text("")
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        typer.echo(f"pid {pid} exited before the signal landed")
+        return
+
+    typer.echo(f"sent SIGTERM to pid {pid}")
 
 
 @app.command()
 def halt() -> None:
-    """Halt a running batch after the in-flight session finishes (Slice B)."""
-    _stub("halt")
+    """Halt a running batch after the in-flight session finishes.
+
+    Writes ``.huragok/requests/halt`` and sends SIGUSR1 so the daemon
+    picks up the request on the next tick. The current session continues
+    to completion; no new sessions launch after it.
+    """
+    root = _resolve_root()
+    _init_logging()
+
+    req_dir = requests_dir(root)
+    req_dir.mkdir(parents=True, exist_ok=True)
+    halt_path = req_dir / "halt"
+    halt_path.write_text("")
+
+    pid = _read_daemon_pid(root)
+    if pid is None or not _process_alive(pid):
+        typer.echo("halt request written; no live daemon to signal")
+        return
+    try:
+        os.kill(pid, signal.SIGUSR1)
+    except ProcessLookupError:
+        typer.echo("halt request written; daemon exited before signal")
+        return
+    typer.echo(f"halt request written; signalled pid {pid}")
+
+
+# ---------------------------------------------------------------------------
+# Still-stubbed Slice-B commands (promoted in B2).
+# ---------------------------------------------------------------------------
 
 
 @app.command()
@@ -426,3 +496,34 @@ def logs(
 ) -> None:
     """Tail the current batch log (Slice B)."""
     _stub("logs")
+
+
+# ---------------------------------------------------------------------------
+# CLI internals shared by run / stop / halt.
+# ---------------------------------------------------------------------------
+
+
+def _read_daemon_pid(root: Path) -> int | None:
+    """Return the pid recorded in the daemon pid file, or None if absent."""
+    pid_path = daemon_pid_file(root)
+    try:
+        raw = pid_path.read_text().strip()
+    except FileNotFoundError:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        return None
+
+
+def _process_alive(pid: int) -> bool:
+    """Return True if ``pid`` is a live process owned by anyone on this host."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True

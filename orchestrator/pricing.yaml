@@ -1,0 +1,30 @@
+# Huragok — local pricing table (ADR-0002 D4)
+#
+# Used for real-time dollar estimates during session execution. Operator-
+# maintained: update the `updated:` date and model entries when Anthropic
+# ships pricing changes. Missing models cause the daemon to refuse to
+# start, not silent zero-dollar accounting.
+#
+# Operators who want authoritative totals (vs. table estimates) can
+# provision ANTHROPIC_ADMIN_API_KEY; the Budget Tracker then reconciles
+# against /v1/organizations/cost_report at session end. Without the
+# admin key, table drift is the known cost of staying simple.
+
+version: 1
+updated: 2026-04-22
+models:
+  claude-opus-4-7:
+    input_per_mtok: 15.00
+    output_per_mtok: 75.00
+    cache_read_per_mtok: 1.50
+    cache_write_per_mtok: 18.75
+  claude-sonnet-4-6:
+    input_per_mtok: 3.00
+    output_per_mtok: 15.00
+    cache_read_per_mtok: 0.30
+    cache_write_per_mtok: 3.75
+  claude-haiku-4-5-20251001:
+    input_per_mtok: 1.00
+    output_per_mtok: 5.00
+    cache_read_per_mtok: 0.10
+    cache_write_per_mtok: 1.25

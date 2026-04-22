@@ -140,23 +140,54 @@ def test_show_nonexistent_task(tmp_huragok_root: Path, monkeypatch: pytest.Monke
 
 
 # ---------------------------------------------------------------------------
-# Stubs.
+# Lifecycle commands: stop / halt.
 # ---------------------------------------------------------------------------
 
 
-def test_run_stub_exits_1(tmp_huragok_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_stop_without_daemon_is_friendly(
+    tmp_huragok_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_huragok_root)
-    result = runner.invoke(app, ["run"])
-    assert result.exit_code == 1
-    assert "not implemented" in result.stderr.lower()
+    result = runner.invoke(app, ["stop"])
+    assert result.exit_code == 0
+    assert "no daemon running" in result.stdout.lower()
+
+
+def test_stop_clears_stale_pid_file(
+    tmp_huragok_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from orchestrator.paths import daemon_pid_file
+
+    pid_path = daemon_pid_file(tmp_huragok_root)
+    # Pick a PID that should not exist.
+    pid_path.write_text("4194302\n")
+    monkeypatch.chdir(tmp_huragok_root)
+
+    result = runner.invoke(app, ["stop"])
+    assert result.exit_code == 0
+    assert "stale" in result.stdout.lower()
+    assert not pid_path.exists()
+
+
+def test_halt_writes_request_file(tmp_huragok_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from orchestrator.paths import requests_dir
+
+    monkeypatch.chdir(tmp_huragok_root)
+    result = runner.invoke(app, ["halt"])
+    assert result.exit_code == 0
+    halt_marker = requests_dir(tmp_huragok_root) / "halt"
+    assert halt_marker.exists()
+
+
+# ---------------------------------------------------------------------------
+# Remaining Slice-B stubs.
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
     "cmd",
     [
         ["start"],
-        ["stop"],
-        ["halt"],
         ["reply", "continue"],
         ["submit", "some-batch.yaml"],
         ["logs"],

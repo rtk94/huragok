@@ -8,7 +8,7 @@ Every model enforces ``extra="forbid"`` so typos in a state file surface
 as validation errors instead of being silently dropped.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -221,3 +221,31 @@ class ArtifactFrontmatter(BaseModel):
     author_agent: AgentRole
     written_at: datetime
     session_id: str
+
+
+class ModelPricing(BaseModel):
+    """Per-model token prices, in dollars per million tokens (ADR-0002 D4)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    input_per_mtok: float
+    output_per_mtok: float
+    cache_read_per_mtok: float
+    cache_write_per_mtok: float
+
+
+class PricingTable(BaseModel):
+    """Model for ``orchestrator/pricing.yaml`` — live-estimate pricing lookup."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: int
+    # PyYAML parses bare ``YYYY-MM-DD`` as ``datetime.date``; accept both
+    # so the pricing file can be written in the idiomatic style.
+    updated: date | str
+    models: dict[str, ModelPricing]
+
+    @field_validator("version")
+    @classmethod
+    def _check_version(cls, v: int) -> int:
+        return _require_schema_version(v, "pricing.yaml")
