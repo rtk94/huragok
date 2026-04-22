@@ -225,6 +225,16 @@ any previous batch's `.huragok/work/` directory to
 `state.yaml` pointing at the new batch. It does **not** start the
 daemon.
 
+### 4. Verify the install
+
+After setup, a smoke test is the recommended way to confirm everything
+is wired correctly — auth resolves, the daemon launches, agent
+sessions reach Claude Code, artifacts land on disk, and the
+batch-complete transition fires. The methodology and a ready-to-adapt
+two-task batch shape live in [`smoke-tests.md`](smoke-tests.md); a
+worked example with annotated output is in
+[`example-run.md`](example-run.md).
+
 ## Running the daemon
 
 Huragok runs in exactly one mode per invocation: foreground

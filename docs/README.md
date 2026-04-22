@@ -23,3 +23,15 @@ Retrospective notes produced by Claude Code at the end of each slice. Document w
 ### `deployment.md` — Operator Deployment Guide
 
 How to install, configure, and run Huragok. The target reader is someone deploying it, not contributing to it.
+
+### `example-run.md` — Worked Example
+
+A real two-task batch (`smoke-002`) walked end-to-end with annotated agent output. Read this if you want to see what a run actually looks like before installing anything.
+
+### `smoke-tests.md` — Smoke-Test Methodology
+
+How to design, run, and verify an end-to-end smoke test against live Claude Code. The recommended first run after a fresh install, and the methodology by which Phase 1 was validated.
+
+### `reference/` — Captured Artifacts
+
+Raw artifacts from real runs, preserved verbatim. Currently `smoke-002-artifacts/` — the agent outputs, audit log, and generated code from the Phase 1 MVP's second end-to-end smoke test. Walked through narratively in `example-run.md`.

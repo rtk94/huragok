@@ -1,0 +1,57 @@
+version: 1
+batch_id: smoke-002
+created: '2026-04-22T19:00:00Z'
+description: Second end-to-end smoke test of Huragok orchestration. Two tasks with
+  a depends_on relationship — exercises the multi-task supervisor path, inter-task
+  handoff, batch-complete transition, and whether the second task's architect reads
+  the first task's completed artifacts for context. Replaces smoke-001 (which covered
+  the single-task happy path).
+budgets:
+  wall_clock_hours: 2.0
+  max_tokens: 3000000
+  max_dollars: 20.0
+  max_iterations: 2
+  session_timeout_minutes: 30
+notifications:
+  telegram_chat_id: null
+  warn_threshold_pct: 80
+tasks:
+- id: task-0001
+  title: Add greet() function to hello module
+  kind: backend
+  priority: 1
+  acceptance_criteria:
+  - 'Python module at hello.py (project root) exports a function `greet(name: str)
+    -> str`.'
+  - Calling `greet('World')` returns exactly the string `'Hello, World!'`.
+  - Calling `greet('')` returns exactly the string `'Hello, !'`.
+  - Calling `greet('  Alice  ')` returns exactly the string `'Hello,   Alice  !'`
+    (whitespace preserved).
+  - 'The function has `(name: str) -> str` type annotations and a one-line docstring.'
+  - 'A pytest-compatible test module `test_hello.py` at project root covers: a normal
+    name, an empty string, and a whitespace-padded name.'
+  - '`pytest` runs cleanly with zero warnings.'
+  depends_on: []
+  foundational: false
+- id: task-0002
+  title: Add farewell() function to goodbye module, mirroring hello's structure
+  kind: backend
+  priority: 2
+  acceptance_criteria:
+  - 'Python module at goodbye.py (project root) exports a function `farewell(name:
+    str) -> str`.'
+  - The function's structure, type annotations, docstring style, and formatting must
+    match `hello.greet` — this is a deliberate stylistic mirror so the two modules
+    read as siblings.
+  - Calling `farewell('World')` returns exactly the string `'Goodbye, World!'`.
+  - Calling `farewell('')` returns exactly the string `'Goodbye, !'`.
+  - Calling `farewell('  Alice  ')` returns exactly the string `'Goodbye,   Alice  !'`
+    (whitespace preserved, matching hello.greet's behaviour).
+  - 'A pytest-compatible test module `test_goodbye.py` at project root covers: a normal
+    name, an empty string, and a whitespace-padded name. Test structure should mirror
+    `test_hello.py` for easy side-by-side comparison.'
+  - Running `pytest` from the project root collects and passes all six tests (three
+    from test_hello.py, three from test_goodbye.py) with zero warnings.
+  depends_on:
+  - task-0001
+  foundational: false
